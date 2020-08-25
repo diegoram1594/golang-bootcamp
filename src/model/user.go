@@ -1,40 +1,52 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type User struct {
 	Name string
 	Currency string
-	Cart map[Product]int
+	Cart map[string]int
 	Id string
 }
 
-func (u User) AddProductCart(product Product)  {
-	value,ok := u.Cart[product]
+func (u *User) AddProductCart(productId string)  {
+	value,ok := u.Cart[productId]
 	if ok{
-		u.Cart[product] = value + 1
+		u.Cart[productId] = value + 1
 	}else{
-		u.Cart[product] = 1
+		u.Cart[productId] = 1
 	}
 }
-func (u User) RemoveProductCart(product Product)  {
-	value,ok := u.Cart[product]
+func (u *User) RemoveProductCart(productId string)  {
+	value,ok := u.Cart[productId]
 	if ok && value >1 {
-		u.Cart[product] = value - 1
+		u.Cart[productId] = value - 1
 	}else{
-		delete(u.Cart, product)
+		delete(u.Cart, productId)
 	}
 }
-
-func (u User) PrintCart()  {
-	fmt.Printf("%s's cart\n",u.Name)
-	for product,quantity:= range u.Cart{
-		var price float64
-		if u.Currency == "COP"{
-			price = product.GetPriceCOP()
-		}else{
-			price = product.GetPriceUSD()
+func findProductById(id string, products []Product) Product {
+	for _, element := range products{
+		if element.GetId() == id {
+			return element
 		}
+	}
+	return nil
+}
+func getPrice(u User,product Product)  float64{
+	if u.Currency == "COP"{
+		return product.GetPriceCOP()
+	}else{
+		return product.GetPriceUSD()
+	}
+}
+func (u User) PrintCart(products []Product)  {
+	fmt.Printf("%s's cart\n",u.Name)
+	for id,quantity:= range u.Cart{
+		product := findProductById(id,products)
+		price := getPrice(u,product)
 		fmt.Printf("Name: %s --- Price $%.2f USD Quantity: %d  \n", product.GetName(), price, quantity)
 	}
 }

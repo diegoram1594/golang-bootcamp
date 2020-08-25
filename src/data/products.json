@@ -1,0 +1,8 @@
+[
+  {"Name": "Water", "PriceCOP": 2000, "typeBasic" : true,"Id" : "1"},
+  {"Name": "Rice", "PriceCOP": 15000,"typeBasic" : true,"Id" : "2"},
+  {"Name": "Milk", "PriceCOP": 4000,"typeBasic" : true,"Id" : "3"},
+  {"Name": "Meat", "PriceCOP": 8000,"typeBasic" : true,"Id" : "4"},
+  {"Name": "TV", "PriceCOP": 2000000,"typeNormal": true,"Id" : "5"},
+  {"Name": "MacBook", "PriceCOP": 40000000,"typeNormal": true,"Id" : "6"}
+]
