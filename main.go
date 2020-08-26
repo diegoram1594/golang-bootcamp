@@ -16,7 +16,7 @@ func main() {
 	user = findUserById("2",users)
 	data.WriteUsers(users)
 
-	servidor := server.Server{Port: ":8000"}
+	servidor := server.NewServer()
 	err := servidor.Listen()
 	if err!= nil {
 		fmt.Println(err)

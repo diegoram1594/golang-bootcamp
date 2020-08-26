@@ -1,27 +1,31 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
-	"golangbootcamp/src/data"
 	"net/http"
 )
 
 type Server struct {
 	Port string
+	router *Router
 }
 
-func (s Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
+func NewServer() *Server  {
+	s := &Server{
+		Port:   ":8000",
+		router: NewRouter(),
 	}
-	json.NewEncoder(w).Encode(data.ReadProducts())
+	s.handle("/", HandleRoot)
+	s.handle("/articles", HandleArticles)
+	return s
+}
+
+func (s *Server) handle(path string, handlerFunc http.HandlerFunc)  {
+	s.router.rules[path] = handlerFunc
 }
 
 func (s *Server) Listen() error {
 	fmt.Println("Server ")
-	http.Handle("/", s)
+	http.Handle("/", s.router)
 	return  http.ListenAndServe(s.Port,nil)
 }
