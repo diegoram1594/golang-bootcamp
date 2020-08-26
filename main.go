@@ -1,11 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"golangbootcamp/src/data"
 	"golangbootcamp/src/model"
-	"net/http"
+	"golangbootcamp/src/server"
 )
 
 func main() {
@@ -17,8 +16,11 @@ func main() {
 	user = findUserById("2",users)
 	data.WriteUsers(users)
 
-	server := Servidor{port: ":8000"}
-	server.Listen()
+	servidor := server.Server{Port: ":8000"}
+	err := servidor.Listen()
+	if err!= nil {
+		fmt.Println(err)
+	}
 }
 
 func PrintProducts(products []model.Product) string {
@@ -39,21 +41,4 @@ func findUserById(id string, users []*model.User) *model.User {
 	return nil
 }
 
-type Servidor struct {
-	port string
-}
 
-func (s Servidor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	json.NewEncoder(w).Encode(data.ReadProducts())
-}
-
-func (s *Servidor) Listen() error {
-	fmt.Println("Server ")
-	http.Handle("/", s)
-	return  http.ListenAndServe(s.port,nil)
-}
