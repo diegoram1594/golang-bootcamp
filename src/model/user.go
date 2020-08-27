@@ -19,13 +19,17 @@ func (u *User) AddProductCart(productId string)  {
 		u.Cart[productId] = 1
 	}
 }
-func (u *User) RemoveProductCart(productId string)  {
+func (u *User) RemoveProductCart(productId string) bool {
 	value,ok := u.Cart[productId]
-	if ok && value >1 {
+	if !ok{
+		return false
+	}
+	if value >1 {
 		u.Cart[productId] = value - 1
 	}else{
 		delete(u.Cart, productId)
 	}
+	return true
 }
 func findProductById(id string, products []Product) Product {
 	for _, element := range products{

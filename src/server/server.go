@@ -18,7 +18,7 @@ func NewServer() *Server  {
 	s.handle(http.MethodGet,"/", HandleRoot)
 	s.handle(http.MethodGet,"/articles", HandleArticles)
 	s.handle(http.MethodPost,"/user", HandleNewUser)
-	s.handle(http.MethodDelete,"/cart", HabndleRemoveAllItemsCart)
+	s.handle(http.MethodDelete,"/cart", HandleRemoveAllItemsCart)
 	return s
 }
 

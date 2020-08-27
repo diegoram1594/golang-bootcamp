@@ -12,6 +12,9 @@ import (
 type localError struct {
 	description string
 }
+type userCart struct {
+	userId, productId string
+}
 
 func HandleArticles(w http.ResponseWriter, r *http.Request)  {
 	p := strings.Split(r.URL.Path, "/")
@@ -57,7 +60,7 @@ func HandleNewUser(w http.ResponseWriter, r *http.Request)  {
 	json.NewEncoder(w).Encode(user)
 }
 
-func HabndleRemoveAllItemsCart(w http.ResponseWriter, r *http.Request)  {
+func HandleRemoveAllItemsCart(w http.ResponseWriter, r *http.Request)  {
 	p := strings.Split(r.URL.Path, "/")
 	switch len(p) {
 	case 3:
@@ -70,6 +73,22 @@ func HabndleRemoveAllItemsCart(w http.ResponseWriter, r *http.Request)  {
 	w.WriteHeader(http.StatusNotFound)
 
 }
+
+func HandleAddItemCart(w http.ResponseWriter, r *http.Request)  {
+	var userCart userCart
+	err := json.NewDecoder(r.Body).Decode(&userCart)
+	if err != nil{
+		json.NewEncoder(w).Encode(err)
+	}
+	product := data.ReadProductById(userCart.productId)
+	if product == nil{
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	data.AddProductCartUser(userCart.userId,userCart.productId)
+	//TODO
+}
+
 
 func HandleRoot(w http.ResponseWriter, r *http.Request)  {
 	fmt.Fprint(w,"root")
@@ -87,7 +106,7 @@ func validateUser(user model.User) (localError,bool){
 		return le,false
 	}
 	if user.Currency == "COP" || user.Currency == "USD"{
-		if data.FindUserById(user.Id) != nil{
+		if data.ReadUserById(user.Id) != nil{
 			le.description = "Id duplicated"
 			return le,false
 		}

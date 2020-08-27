@@ -87,7 +87,7 @@ func ReadProductById(id string) model.Product {
 	return nil
 }
 
-func FindUserById(id string) *model.User {
+func ReadUserById(id string) *model.User {
 	users := ReadUsers()
 	for _, user := range users {
 		if user.Id == id {
@@ -111,6 +111,30 @@ func DeleteCartUser(id string) bool {
 	for _, user := range users {
 		if user.Id == id {
 			user.Cart = make(map[string]int)
+			WriteUsers(users)
+			return true
+		}
+	}
+	return false
+}
+
+func RemoveProductCartUser(idUser,idProduct string) bool {
+	users := ReadUsers()
+	for _, user := range users {
+		if user.Id == idUser {
+			res := user.RemoveProductCart(idProduct)
+			WriteUsers(users)
+			return res
+		}
+	}
+	return false
+}
+
+func AddProductCartUser(idUser,idProduct string) bool {
+	users := ReadUsers()
+	for _, user := range users {
+		if user.Id == idUser {
+			user.AddProductCart(idProduct)
 			WriteUsers(users)
 			return true
 		}
