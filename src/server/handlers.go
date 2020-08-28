@@ -12,9 +12,6 @@ import (
 type localError struct {
 	description string
 }
-type userCart struct {
-	UserId, ProductId string
-}
 
 func HandleArticles(w http.ResponseWriter, r *http.Request)  {
 	p := strings.Split(r.URL.Path, "/")
@@ -52,7 +49,7 @@ func HandleNewUser(w http.ResponseWriter, r *http.Request)  {
 		json.NewEncoder(w).Encode(le)
 		return
 	}
-	user.Cart = make(map[string]int)
+	user.Cart = make(map[string]uint)
 	users := data.ReadUsers()
 	users = append(users, &user)
 	data.WriteUsers(users)
@@ -64,6 +61,7 @@ func HandleUser(w http.ResponseWriter, r *http.Request)  {
 	p := strings.Split(r.URL.Path, "/")
 	if len(p) != 3{
 		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 	user := data.ReadUserById(p[2])
 	if user != nil{
@@ -74,7 +72,7 @@ func HandleUser(w http.ResponseWriter, r *http.Request)  {
 }
 
 func HandleRemoveItemsCart(w http.ResponseWriter, r *http.Request)  {
-	var userCart userCart
+	var userCart model.UserCart
 	json.NewDecoder(r.Body).Decode(&userCart)
 	if len(userCart.ProductId) > 0{
 		//Remove one item
@@ -96,19 +94,22 @@ func HandleRemoveItemsCart(w http.ResponseWriter, r *http.Request)  {
 }
 
 func HandleAddItemCart(w http.ResponseWriter, r *http.Request)  {
-	var userCart userCart
+	var userCart model.UserCart
 	err := json.NewDecoder(r.Body).Decode(&userCart)
 	if err != nil{
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(err)
 		return
 	}
+	if userCart.Quantity == 0 {
+		userCart.Quantity = 1
+	}
 	product := data.ReadProductById(userCart.ProductId)
 	if product == nil{
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	res := data.AddProductCartUser(userCart.UserId,userCart.ProductId)
+	res := data.AddProductCartUser(userCart)
 	if !res{
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -124,7 +125,7 @@ func HandleRoot(w http.ResponseWriter, r *http.Request)  {
 func validateUser(user model.User) (localError,bool){
 	var le localError
 	if len(user.Name) < 2{
-		le.description = "Name should have at least 2 characters"
+		le.description = "Title should have at least 2 characters"
 		return le,false
 	}
 	if len(user.Id) == 0 {

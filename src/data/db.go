@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"golangbootcamp/src/model"
 	"io/ioutil"
+	"net/http"
 )
 
 func ReadUsers() []*model.User {
@@ -35,10 +36,10 @@ func WriteUsers(users []*model.User)  {
 }
 
 func getProduct(element json.RawMessage) model.Product {
-	var basicProduct model.BasicProduct
-	err := json.Unmarshal(element,&basicProduct)
-	if err == nil && basicProduct.TypeBasic{
-		return basicProduct
+	var internetProduct model.InternetProduct
+	err := json.Unmarshal(element,&internetProduct)
+	if err == nil {
+		return internetProduct
 	}
 	var normalProduct model.NormalProduct
 	err = json.Unmarshal(element,&normalProduct)
@@ -48,9 +49,19 @@ func getProduct(element json.RawMessage) model.Product {
 	return nil
 }
 
-func ReadProducts() []model.Product {
-	data, err := ioutil.ReadFile("src/data/products.json")
-	var products []model.Product
+func ReadProducts() []model.InternetProduct {
+	var products []model.InternetProduct
+	res, err := http.Get("https://challenge.getsandbox.com/articles")
+	if err != nil{
+		return nil
+	}
+	defer res.Body.Close()
+	err = json.NewDecoder(res.Body).Decode(&products)
+	if err != nil {
+		return nil
+	}
+	/*data, err := ioutil.ReadFile("src/data/products.json")
+
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -62,12 +73,24 @@ func ReadProducts() []model.Product {
 	}
 	for _, element := range slice{
 		products = append(products, getProduct(element))
-	}
+	}*/
 	return products
 }
 
 func ReadProductById(id string) model.Product {
-	data, err := ioutil.ReadFile("src/data/products.json")
+
+	res, err := http.Get("https://challenge.getsandbox.com/articles/"+id)
+	if err != nil{
+		return nil
+	}
+	defer res.Body.Close()
+	var product model.InternetProduct
+	err = json.NewDecoder(res.Body).Decode(&product)
+	if err != nil {
+		return nil
+	}
+	return product
+	/*data, err := ioutil.ReadFile("src/data/products.json")
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -83,8 +106,7 @@ func ReadProductById(id string) model.Product {
 		if product.GetId() == id{
 			return product
 		}
-	}
-	return nil
+	}*/
 }
 
 func ReadUserById(id string) *model.User {
@@ -100,7 +122,7 @@ func ReadUserById(id string) *model.User {
 func PrintProducts(products []model.Product) string {
 	var stringProducts string
 	for _, element := range products{
-		stringProducts += fmt.Sprintf("Name: %s --- Price $%.2f USD, $%.0f COP  \n",element.GetName(),
+		stringProducts += fmt.Sprintf("Title: %s --- Price $%.2f USD, $%.0f COP  \n",element.GetName(),
 			element.GetPriceUSD(),element.GetPriceCOP())
 	}
 	return stringProducts
@@ -110,7 +132,7 @@ func DeleteCartUser(id string) bool {
 	users := ReadUsers()
 	for _, user := range users {
 		if user.Id == id {
-			user.Cart = make(map[string]int)
+			user.Cart = make(map[string]uint)
 			WriteUsers(users)
 			return true
 		}
@@ -130,11 +152,11 @@ func RemoveProductCartUser(idUser,idProduct string) bool {
 	return false
 }
 
-func AddProductCartUser(idUser,idProduct string) bool {
+func AddProductCartUser(cart model.UserCart) bool {
 	users := ReadUsers()
 	for _, user := range users {
-		if user.Id == idUser {
-			user.AddProductCart(idProduct)
+		if user.Id == cart.UserId {
+			user.AddProductCart(cart)
 			WriteUsers(users)
 			return true
 		}

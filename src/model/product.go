@@ -9,11 +9,16 @@ type Product interface {
 	GetId() string
 }
 
+type InternetProduct struct {
+	Title     string
+	Price     float64 `json:",string"`
+	Id        string
+}
 type BasicProduct struct {
-	Name     string
-	PriceCOP float64
+	Name      string
+	PriceCOP  float64
 	TypeBasic bool
-	Id string
+	Id        string
 }
 type NormalProduct struct {
 	Name     string
@@ -22,18 +27,18 @@ type NormalProduct struct {
 	Id string
 }
 
-func (p BasicProduct) GetPriceCOP() float64 {
-	return p.PriceCOP
+func (p InternetProduct) GetPriceCOP() float64 {
+	return p.Price * COPUSD
 }
 
-func (p BasicProduct) GetPriceUSD() float64 {
-	return p.PriceCOP / COPUSD
+func (p InternetProduct) GetPriceUSD() float64 {
+	return p.Price
 }
-func (p BasicProduct) GetName() string  {
-	return p.Name
+func (p InternetProduct) GetName() string  {
+	return p.Title
 }
 
-func (p BasicProduct) GetId() string  {
+func (p InternetProduct) GetId() string  {
 	return p.Id
 }
 
@@ -49,6 +54,20 @@ func (p NormalProduct) GetName() string  {
 	return p.Name
 }
 func (p NormalProduct) GetId() string  {
+	return p.Id
+}
+func (p BasicProduct) GetPriceCOP() float64 {
+	return p.PriceCOP
+}
+func (p BasicProduct) GetPriceUSD() float64 {
+	return p.PriceCOP / COPUSD
+}
+
+func (p BasicProduct) GetName() string {
+	return p.Name
+}
+
+func (p BasicProduct) GetId() string  {
 	return p.Id
 }
 

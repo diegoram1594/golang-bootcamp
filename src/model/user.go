@@ -7,16 +7,25 @@ import (
 type User struct {
 	Name string
 	Currency string
-	Cart map[string]int
+	Cart map[string]uint
 	Id string
 }
+type UserCart struct {
+	UserId, ProductId string
+	Quantity          uint
+	Total             bool
+}
 
-func (u *User) AddProductCart(productId string)  {
-	value,ok := u.Cart[productId]
+func (u *User) AddProductCart(cart UserCart)  {
+	if cart.Total{
+		u.Cart[cart.ProductId] = cart.Quantity
+		return
+	}
+	value,ok := u.Cart[cart.ProductId]
 	if ok{
-		u.Cart[productId] = value + 1
+		u.Cart[cart.ProductId] = value + cart.Quantity
 	}else{
-		u.Cart[productId] = 1
+		u.Cart[cart.ProductId] = cart.Quantity
 	}
 }
 func (u *User) RemoveProductCart(productId string) bool {
@@ -51,6 +60,8 @@ func (u User) PrintCart(products []Product)  {
 	for id,quantity:= range u.Cart{
 		product := findProductById(id,products)
 		price := getPrice(u,product)
-		fmt.Printf("Name: %s --- Price $%.2f USD Quantity: %d  \n", product.GetName(), price, quantity)
+		fmt.Printf("Title: %s --- Price $%.2f USD Quantity: %d  \n", product.GetName(), price, quantity)
 	}
 }
+
+
