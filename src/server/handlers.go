@@ -13,7 +13,7 @@ type localError struct {
 	description string
 }
 type userCart struct {
-	userId, productId string
+	UserId, ProductId string
 }
 
 func HandleArticles(w http.ResponseWriter, r *http.Request)  {
@@ -60,35 +60,61 @@ func HandleNewUser(w http.ResponseWriter, r *http.Request)  {
 	json.NewEncoder(w).Encode(user)
 }
 
-func HandleRemoveAllItemsCart(w http.ResponseWriter, r *http.Request)  {
+func HandleUser(w http.ResponseWriter, r *http.Request)  {
 	p := strings.Split(r.URL.Path, "/")
-	switch len(p) {
-	case 3:
-		ok := data.DeleteCartUser(p[2])
+	if len(p) != 3{
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	user := data.ReadUserById(p[2])
+	if user != nil{
+		json.NewEncoder(w).Encode(user)
+		return
+	}
+	w.WriteHeader(http.StatusNotFound)
+}
+
+func HandleRemoveItemsCart(w http.ResponseWriter, r *http.Request)  {
+	var userCart userCart
+	json.NewDecoder(r.Body).Decode(&userCart)
+	if len(userCart.ProductId) > 0{
+		//Remove one item
+		ok := data.RemoveProductCartUser(userCart.UserId,userCart.ProductId)
+		if ok{
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+	}else{
+		//Remove All items
+		ok := data.DeleteCartUser(userCart.UserId)
 		if ok{
 			w.WriteHeader(http.StatusOK)
 			return
 		}
 	}
 	w.WriteHeader(http.StatusNotFound)
-
 }
 
 func HandleAddItemCart(w http.ResponseWriter, r *http.Request)  {
 	var userCart userCart
 	err := json.NewDecoder(r.Body).Decode(&userCart)
 	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(err)
+		return
 	}
-	product := data.ReadProductById(userCart.productId)
+	product := data.ReadProductById(userCart.ProductId)
 	if product == nil{
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	data.AddProductCartUser(userCart.userId,userCart.productId)
-	//TODO
+	res := data.AddProductCartUser(userCart.UserId,userCart.ProductId)
+	if !res{
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
-
 
 func HandleRoot(w http.ResponseWriter, r *http.Request)  {
 	fmt.Fprint(w,"root")
