@@ -13,7 +13,7 @@ type localError struct {
 	description string
 }
 
-func HandleArticles(w http.ResponseWriter, r *http.Request)  {
+func HandleProducts(w http.ResponseWriter, r *http.Request)  {
 	p := strings.Split(r.URL.Path, "/")
 	switch len(p){
 	case 2:
@@ -49,15 +49,16 @@ func HandleNewUser(w http.ResponseWriter, r *http.Request)  {
 		json.NewEncoder(w).Encode(le)
 		return
 	}
-	user.Cart = make(map[string]uint)
-	users := data.ReadUsers()
-	users = append(users, &user)
-	data.WriteUsers(users)
+	ok = data.NewUser(user)
+	if !ok{
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user)
 }
 
-func HandleUser(w http.ResponseWriter, r *http.Request)  {
+func HandleGetUser(w http.ResponseWriter, r *http.Request)  {
 	p := strings.Split(r.URL.Path, "/")
 	if len(p) != 3{
 		w.WriteHeader(http.StatusBadRequest)
@@ -74,9 +75,16 @@ func HandleUser(w http.ResponseWriter, r *http.Request)  {
 func HandleRemoveItemsCart(w http.ResponseWriter, r *http.Request)  {
 	var userCart model.UserCart
 	json.NewDecoder(r.Body).Decode(&userCart)
+
 	if len(userCart.ProductId) > 0{
 		//Remove one item
-		ok := data.RemoveProductCartUser(userCart.UserId,userCart.ProductId)
+		_, ok := data.ReadProductCartUser(userCart.UserId,userCart.ProductId)
+		if !ok{
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		ok = data.RemoveOneProductCartUser(userCart.UserId,userCart.ProductId)
 		if ok{
 			w.WriteHeader(http.StatusOK)
 			return
@@ -84,7 +92,7 @@ func HandleRemoveItemsCart(w http.ResponseWriter, r *http.Request)  {
 
 	}else{
 		//Remove All items
-		ok := data.DeleteCartUser(userCart.UserId)
+		ok := data.DeleteAllProductsCartUser(userCart.UserId)
 		if ok{
 			w.WriteHeader(http.StatusOK)
 			return
@@ -101,19 +109,38 @@ func HandleAddItemCart(w http.ResponseWriter, r *http.Request)  {
 		json.NewEncoder(w).Encode(err)
 		return
 	}
-	if userCart.Quantity == 0 {
+	if userCart.Total {
+		if userCart.Quantity == 0{
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+	if userCart.Quantity == 0{
 		userCart.Quantity = 1
 	}
+	//validate Product
 	product := data.ReadProductById(userCart.ProductId)
 	if product == nil{
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	res := data.AddProductCartUser(userCart)
-	if !res{
+	//Validate user
+	user := data.ReadUserById(userCart.UserId)
+	if user == nil{
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+	_,ok := data.ReadProductCartUser(userCart.UserId,userCart.ProductId)
+	if ok{
+		if userCart.Total{
+			data.UpdateProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+		} else{
+			data.AddProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+		}
+	}else{
+		data.InsertProductCartUser(userCart)
+	}
+	
 	w.WriteHeader(http.StatusOK)
 }
 

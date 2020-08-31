@@ -1,14 +1,15 @@
 package model
 
-import (
-	"fmt"
-)
-
 type User struct {
 	Name string
 	Currency string
-	Cart map[string]uint
+	//Cart map[string]uint
 	Id string
+	Products []ProductUser
+}
+type ProductUser struct {
+	Product InternetProduct
+	Quantity uint
 }
 type UserCart struct {
 	UserId, ProductId string
@@ -16,7 +17,7 @@ type UserCart struct {
 	Total             bool
 }
 
-func (u *User) AddProductCart(cart UserCart)  {
+/*func (u *User) AddProductCart(cart UserCart)  {
 	if cart.Total{
 		u.Cart[cart.ProductId] = cart.Quantity
 		return
@@ -54,14 +55,14 @@ func getPrice(u User,product Product)  float64{
 	}else{
 		return product.GetPriceUSD()
 	}
-}
-func (u User) PrintCart(products []Product)  {
+}*/
+/*func (u User) PrintCart(products []Product)  {
 	fmt.Printf("%s's cart\n",u.Name)
 	for id,quantity:= range u.Cart{
 		product := findProductById(id,products)
 		price := getPrice(u,product)
 		fmt.Printf("Title: %s --- Price $%.2f USD Quantity: %d  \n", product.GetName(), price, quantity)
 	}
-}
+}*/
 
 

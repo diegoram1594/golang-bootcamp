@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"golangbootcamp/src/data"
 	"net/http"
 )
 
@@ -16,11 +17,12 @@ func NewServer() *Server  {
 		router: NewRouter(),
 	}
 	s.handle(http.MethodGet,"/", HandleRoot)
-	s.handle(http.MethodGet,"/articles", HandleArticles)
+	s.handle(http.MethodGet,"/articles", HandleProducts)
 	s.handle(http.MethodPost,"/user", HandleNewUser)
-	s.handle(http.MethodGet,"/user", HandleUser)
+	s.handle(http.MethodGet,"/user", HandleGetUser)
 	s.handle(http.MethodPut,"/cart", HandleAddItemCart)
 	s.handle(http.MethodDelete,"/cart",HandleRemoveItemsCart)
+	data.OpenDB()
 	return s
 }
 
