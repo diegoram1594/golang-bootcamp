@@ -17,7 +17,7 @@ func NewRouter() *Router {
 
 func (router Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	handler,ok := router.findHandler(r.URL.Path,r.Method)
+	handler,ok := router.FindHandler(r.URL.Path,r.Method)
 
 	if !ok{
 		w.WriteHeader(http.StatusNotFound)
@@ -26,11 +26,11 @@ func (router Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler(w,r)
 }
 
-func (router Router) findHandler(path string, method string) (http.HandlerFunc, bool) {
-	p := strings.Split(path, "/")
-	if len(p)< 2{
+func (router Router) FindHandler(pathRequest string, method string) (http.HandlerFunc, bool) {
+	path := strings.Split(pathRequest, "/")
+	if len(path)< 2{
 		return nil,false
 	}
-	handler,exist := router.rules[method]["/"+p[1]]
+	handler,exist := router.rules[method]["/"+path[1]]
 	return handler,exist
 }
