@@ -1,16 +1,22 @@
 package main
 
 import (
-	"fmt"
+	"golangbootcamp/src/data"
 	"golangbootcamp/src/server"
 )
 
 func main() {
+	db := &data.DB{}
+	db.NewDB()
+	server.InitDB(db)
 	servidor := server.NewServer()
 	err := servidor.Listen()
 	if err!= nil {
-		fmt.Println(err)
+		panic(err)
 	}
+	defer db.CloseDB()
+
+
 }
 
 

@@ -9,11 +9,10 @@ import (
 	"strings"
 )
 
-var db data.IDatabase
+var db data.DB
 
-func InitDB()  {
-	db = data.Db{}
-	db.OpenDB()
+func InitDB(newDB *data.DB)  {
+	db = *newDB
 }
 
 func HandleProducts(w http.ResponseWriter, r *http.Request)  {
@@ -21,10 +20,21 @@ func HandleProducts(w http.ResponseWriter, r *http.Request)  {
 	switch len(path){
 	case 2:
 		//All products
-		json.NewEncoder(w).Encode(db.ReadProducts())
+		products, err := db.ReadProducts()
+		if err!= nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
+			return
+		}
+		json.NewEncoder(w).Encode(products)
 	case 3:
 		//Product by id
-		res :=db.ReadProductById(path[2])
+		res,err :=db.ReadProductById(path[2])
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
+			return
+		}
 		if res == nil{
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -46,13 +56,14 @@ func HandleNewUser(w http.ResponseWriter, r *http.Request)  {
 	}
 	validationMessage := validateUser(user)
 	if len(validationMessage) > 0{
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(validationMessage)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w,validationMessage)
 		return
 	}
-	ok := db.NewUser(user)
-	if !ok{
-		w.WriteHeader(http.StatusBadRequest)
+	err = db.NewUser(user)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -65,7 +76,11 @@ func HandleGetUser(w http.ResponseWriter, r *http.Request)  {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	user := db.ReadUserById(path[2])
+	user,err := db.ReadUserById(path[2])
+	if err != nil{
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if user != nil{
 		json.NewEncoder(w).Encode(user)
 		return
@@ -79,25 +94,32 @@ func HandleRemoveItemsCart(w http.ResponseWriter, r *http.Request)  {
 
 	if len(userCart.ProductId) > 0{
 		//Remove one item
-		_, ok := db.ReadProductCartUser(userCart.UserId,userCart.ProductId)
-		if !ok{
-			w.WriteHeader(http.StatusNotFound)
+		_, err := db.ReadProductCartUser(userCart.UserId,userCart.ProductId)
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
 			return
 		}
 
-		ok = db.RemoveOneProductCartUser(userCart.UserId,userCart.ProductId)
-		if ok{
-			w.WriteHeader(http.StatusOK)
+		err = db.RemoveOneProductCartUser(userCart.UserId,userCart.ProductId)
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
 			return
 		}
+		w.WriteHeader(http.StatusOK)
+		return
 
 	}else{
 		//Remove All items
-		ok := db.DeleteAllProductsCartUser(userCart.UserId)
-		if ok{
-			w.WriteHeader(http.StatusOK)
+		err := db.DeleteAllProductsCartUser(userCart.UserId)
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
 			return
 		}
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 	w.WriteHeader(http.StatusNotFound)
 }
@@ -120,26 +142,55 @@ func HandleAddItemCart(w http.ResponseWriter, r *http.Request)  {
 		userCart.Quantity = 1
 	}
 	//validate Product
-	product := db.ReadProductById(userCart.ProductId)
+	product,err := db.ReadProductById(userCart.ProductId)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
 	if product == nil{
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	//Validate user
-	user := db.ReadUserById(userCart.UserId)
+	user,err := db.ReadUserById(userCart.UserId)
+	if err != nil{
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if user == nil{
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	_,ok := db.ReadProductCartUser(userCart.UserId,userCart.ProductId)
-	if ok{
+	quantity,_ := db.ReadProductCartUser(userCart.UserId,userCart.ProductId)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+	if quantity > 0{
 		if userCart.Total{
-			db.UpdateProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+			err = db.UpdateProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+			if err != nil{
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(err)
+				return
+			}
 		} else{
-			db.AddProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+			err = db.AddProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+			if err != nil{
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(err)
+				return
+			}
 		}
 	}else{
-		db.InsertProductCartUser(userCart)
+		err = db.InsertProductCartUser(userCart)
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
+			return
+		}
 	}
 	
 	w.WriteHeader(http.StatusOK)
@@ -158,7 +209,11 @@ func validateUser(user model.User) string{
 		return "Id should have at least 1 character"
 	}
 	if user.Currency == "COP" || user.Currency == "USD"{
-		if db.ReadUserById(user.Id) != nil{
+		userDB, err := db.ReadUserById(user.Id)
+		if err != nil{
+			return err.Error()
+		}
+		if userDB != nil{
 			return "Id duplicated"
 		}
 	}else{
