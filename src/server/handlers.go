@@ -9,22 +9,34 @@ import (
 	"strings"
 )
 
-type localError struct {
-	description string
+var db data.DB
+
+func InitDB(newDB *data.DB)  {
+	db = *newDB
 }
 
 func HandleProducts(w http.ResponseWriter, r *http.Request)  {
-	p := strings.Split(r.URL.Path, "/")
-	switch len(p){
+	path := strings.Split(r.URL.Path, "/")
+	switch len(path){
 	case 2:
 		//All products
-		json.NewEncoder(w).Encode(data.ReadProducts())
+		products, err := db.ReadProducts()
+		if err!= nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
+			return
+		}
+		json.NewEncoder(w).Encode(products)
 	case 3:
 		//Product by id
-		res :=data.ReadProductById(p[2])
+		res,err :=db.ReadProductById(path[2])
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
+			return
+		}
 		if res == nil{
 			w.WriteHeader(http.StatusNotFound)
-			json.NewEncoder(w).Encode(localError{description: "article not found"})
 			return
 		}
 		json.NewEncoder(w).Encode(res)
@@ -38,20 +50,20 @@ func HandleNewUser(w http.ResponseWriter, r *http.Request)  {
 	var user model.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil{
-		le := localError{description: err.Error()}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(le)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
 		return
 	}
-	le,ok := validateUser(user)
-	if !ok{
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(le)
+	validationMessage := validateUser(user)
+	if len(validationMessage) > 0{
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w,validationMessage)
 		return
 	}
-	ok = data.NewUser(user)
-	if !ok{
-		w.WriteHeader(http.StatusBadRequest)
+	err = db.NewUser(user)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -59,12 +71,16 @@ func HandleNewUser(w http.ResponseWriter, r *http.Request)  {
 }
 
 func HandleGetUser(w http.ResponseWriter, r *http.Request)  {
-	p := strings.Split(r.URL.Path, "/")
-	if len(p) != 3{
+	path := strings.Split(r.URL.Path, "/")
+	if len(path) != 3{
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	user := data.ReadUserById(p[2])
+	user,err := db.ReadUserById(path[2])
+	if err != nil{
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if user != nil{
 		json.NewEncoder(w).Encode(user)
 		return
@@ -78,25 +94,32 @@ func HandleRemoveItemsCart(w http.ResponseWriter, r *http.Request)  {
 
 	if len(userCart.ProductId) > 0{
 		//Remove one item
-		_, ok := data.ReadProductCartUser(userCart.UserId,userCart.ProductId)
-		if !ok{
-			w.WriteHeader(http.StatusNotFound)
+		_, err := db.ReadProductCartUser(userCart.UserId,userCart.ProductId)
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
 			return
 		}
 
-		ok = data.RemoveOneProductCartUser(userCart.UserId,userCart.ProductId)
-		if ok{
-			w.WriteHeader(http.StatusOK)
+		err = db.RemoveOneProductCartUser(userCart.UserId,userCart.ProductId)
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
 			return
 		}
+		w.WriteHeader(http.StatusOK)
+		return
 
 	}else{
 		//Remove All items
-		ok := data.DeleteAllProductsCartUser(userCart.UserId)
-		if ok{
-			w.WriteHeader(http.StatusOK)
+		err := db.DeleteAllProductsCartUser(userCart.UserId)
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
 			return
 		}
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 	w.WriteHeader(http.StatusNotFound)
 }
@@ -119,26 +142,55 @@ func HandleAddItemCart(w http.ResponseWriter, r *http.Request)  {
 		userCart.Quantity = 1
 	}
 	//validate Product
-	product := data.ReadProductById(userCart.ProductId)
+	product,err := db.ReadProductById(userCart.ProductId)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
 	if product == nil{
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	//Validate user
-	user := data.ReadUserById(userCart.UserId)
+	user,err := db.ReadUserById(userCart.UserId)
+	if err != nil{
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if user == nil{
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	_,ok := data.ReadProductCartUser(userCart.UserId,userCart.ProductId)
-	if ok{
+	quantity,_ := db.ReadProductCartUser(userCart.UserId,userCart.ProductId)
+	if err != nil{
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+	if quantity > 0{
 		if userCart.Total{
-			data.UpdateProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+			err = db.UpdateProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+			if err != nil{
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(err)
+				return
+			}
 		} else{
-			data.AddProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+			err = db.AddProductCartUser(userCart.UserId,userCart.ProductId,userCart.Quantity)
+			if err != nil{
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(err)
+				return
+			}
 		}
 	}else{
-		data.InsertProductCartUser(userCart)
+		err = db.InsertProductCartUser(userCart)
+		if err != nil{
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err)
+			return
+		}
 	}
 	
 	w.WriteHeader(http.StatusOK)
@@ -149,24 +201,23 @@ func HandleRoot(w http.ResponseWriter, r *http.Request)  {
 }
 
 
-func validateUser(user model.User) (localError,bool){
-	var le localError
+func validateUser(user model.User) string{
 	if len(user.Name) < 2{
-		le.description = "Title should have at least 2 characters"
-		return le,false
+		return "Title should have at least 2 characters"
 	}
 	if len(user.Id) == 0 {
-		le.description = "Id should have at least 1 character"
-		return le,false
+		return "Id should have at least 1 character"
 	}
 	if user.Currency == "COP" || user.Currency == "USD"{
-		if data.ReadUserById(user.Id) != nil{
-			le.description = "Id duplicated"
-			return le,false
+		userDB, err := db.ReadUserById(user.Id)
+		if err != nil{
+			return err.Error()
+		}
+		if userDB != nil{
+			return "Id duplicated"
 		}
 	}else{
-		le.description = "Currency should be COP or USD"
-		return le,false
+		return "Currency should be COP or USD"
 	}
-	return le,true
+	return ""
 }
