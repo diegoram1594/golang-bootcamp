@@ -2,10 +2,7 @@ package data
 
 import "golangbootcamp/src/model"
 
-type DBUser interface {
-	NewUser(user model.User) error
-	ReadUserById(id string) (*model.User,error)
-}
+
 func (db DB) NewUser(user model.User) error {
 	_,err := db.database.Query("INSERT INTO USERS (id,name,currency) VALUES(?,?,?)",user.Id,user.Name,user.Currency)
 	if err != nil{

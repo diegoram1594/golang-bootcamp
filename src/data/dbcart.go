@@ -2,15 +2,7 @@ package data
 
 import "golangbootcamp/src/model"
 
-type DBCart interface {
-	ReadProductCartUser(idUser,idProduct string) (int,error)
-	UpdateProductCartUser(idUser,idProduct string, quantity uint) error
-	AddProductCartUser(idUser,idProduct string, quantity uint) error
-	RemoveOneProductCartUser(idUser,idProduct string) error
-	DeleteProductCartUser(idUser,idProduct string) error
-	InsertProductCartUser(cart model.UserCart) error
-	DeleteAllProductsCartUser(idUser string) error
-}
+
 
 func (db DB) ReadProductCartUser(idUser,idProduct string) (int,error)  {
 	var quantity int
