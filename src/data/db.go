@@ -13,11 +13,6 @@ type DB struct {
 	database *sql.DB
 }
 
-type IDataBase interface {
-	NewDB()
-	CloseDB()
-}
-
 type ResultProductUser struct {
 	ProductUser model.ProductUser
 	Error error

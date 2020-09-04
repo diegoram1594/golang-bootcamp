@@ -8,13 +8,13 @@ import (
 func main() {
 	db := &data.DB{}
 	db.NewDB()
-	server.InitDB(db)
-	servidor := server.NewServer()
+	defer db.CloseDB()
+	servidor := server.NewServer(*db)
 	err := servidor.Listen()
 	if err!= nil {
 		panic(err)
 	}
-	defer db.CloseDB()
+
 
 
 }

@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"golangbootcamp/src/data"
 	"net/http"
 )
 
@@ -10,17 +11,20 @@ type Server struct {
 	router *Router
 }
 
-func NewServer() *Server  {
+func NewServer(db data.DB) *Server  {
 	s := &Server{
 		Port:   ":8000",
 		router: NewRouter(),
 	}
+	userHandler := NewUserHandler(db)
+	productHandler := NewProductHandler(db)
+	cartHandler:= NewCartHandler(db,db,db)
 	s.handle(http.MethodGet,"/", HandleRoot)
-	s.handle(http.MethodGet,"/articles", HandleProducts)
-	s.handle(http.MethodPost,"/user", HandleNewUser)
-	s.handle(http.MethodGet,"/user", HandleGetUser)
-	s.handle(http.MethodPut,"/cart", HandleAddItemCart)
-	s.handle(http.MethodDelete,"/cart",HandleRemoveItemsCart)
+	s.handle(http.MethodGet,"/articles", productHandler.HandleProducts)
+	s.handle(http.MethodPost,"/user", userHandler.HandleNewUser)
+	s.handle(http.MethodGet,"/user", userHandler.HandleGetUser)
+	s.handle(http.MethodPut,"/cart", cartHandler.HandleAddItemCart)
+	s.handle(http.MethodDelete,"/cart",cartHandler.HandleRemoveItemsCart)
 	return s
 }
 

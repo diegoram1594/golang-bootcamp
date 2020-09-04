@@ -6,12 +6,6 @@ import (
 	"net/http"
 )
 
-type DBProducts interface {
-	ReadProducts() ([]model.InternetProduct,error)
-	ReadProductById(id string) (model.Product,error)
-	ReadProductByIdGO(id string, quantity uint,channel chan ResultProductUser)
-}
-
 func (db DB) ReadProducts() ([]model.InternetProduct,error) {
 	var products []model.InternetProduct
 	res, err := http.Get("https://challenge.getsandbox.com/articles")
